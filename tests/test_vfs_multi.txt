@@ -1,0 +1,12 @@
+# Тест работы с VFS
+ls
+cd folder
+ls
+cat inner.txt
+cd ..
+ls
+cd docs
+ls
+cat guide.txt
+cd /
+ls

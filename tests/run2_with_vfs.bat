@@ -1,3 +1,3 @@
 @echo off
 chcp 65001 >nul
-python src\shell1.py --vfs "D:\vfs_root"
+python src\shell1.py --vfs "tests\vfs_minimal.zip"
