@@ -5,6 +5,7 @@ import shlex
 import argparse
 import zipfile
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Эмулятор командной оболочки"
@@ -21,6 +22,7 @@ def parse_arguments():
     )
     return parser.parse_args()
 
+
 def load_vfs(path):
     """Загружает VFS из ZIP-архива. Возвращает объект ZipFile или None."""
     if path is None:
@@ -34,6 +36,7 @@ def load_vfs(path):
     except Exception as e:
         print(f"Ошибка загрузки VFS: {e}")
         return None
+
 
 def read_vfs_file(vfs, path):
     """Читает файл из VFS. Возвращает текст или None."""
@@ -53,6 +56,7 @@ def read_vfs_file(vfs, path):
         print(f"Ошибка чтения файла: {e}")
         return None
 
+
 def read_script(path):
     """Читает стартовый скрипт и возвращает список команд."""
     commands = []
@@ -69,6 +73,7 @@ def read_script(path):
         print(f"Ошибка чтения скрипта: {e}")
     return commands
 
+
 def list_vfs_files(vfs):
     """Возвращает список файлов в VFS. Или None, если VFS не загружен."""
     if vfs is None:
@@ -79,6 +84,7 @@ def list_vfs_files(vfs):
     except Exception as e:
         print(f"Ошибка чтения списка файлов: {e}")
         return None
+
 
 def normalize_path(path):
     """Приводит путь к виду /a/b/c без лишних слэшей."""
@@ -122,6 +128,39 @@ def list_in_path(vfs, current_path):
         items.add(first)
     return sorted(items)
 
+
+def list_in_path_detailed(vfs, current_path):
+    """Возвращает список записей в current_path с деталями.
+
+    Каждая запись — словарь: name, is_dir, size.
+    """
+    if vfs is None:
+        return None
+    all_files = vfs.namelist()
+    prefix = "" if current_path == "/" else current_path.lstrip("/") + "/"
+    items = {}
+    for file in all_files:
+        if not file.startswith(prefix):
+            continue
+        rest = file[len(prefix):]
+        if not rest:
+            continue
+        first = rest.split("/")[0]
+        is_dir = "/" in rest
+        name = first + "/" if is_dir else first
+        if name in items:
+            continue
+        if is_dir:
+            items[name] = {"name": name, "is_dir": True, "size": 0}
+        else:
+            try:
+                size = len(vfs.read(file))
+            except Exception:
+                size = 0
+            items[name] = {"name": name, "is_dir": False, "size": size}
+    return [items[k] for k in sorted(items.keys())]
+
+
 def get_prompt():
     """Возвращает приглашение для ввода команд."""
     user = getpass.getuser()
@@ -134,27 +173,102 @@ def get_prompt():
 
     return f"{user}@{host}:{name}$ "
 
+
+def handle_uname(cmd_args):
+    """Обрабатывает команду uname. Возвращает True, если нужно вывести help."""
+    import platform #даёт информацию о системе и Python
+
+    system_name = "EmulatorShell"
+    version = "1.0"
+    python_version = platform.python_version()
+    os_name = platform.system()
+
+    if not cmd_args:
+        print(system_name)
+    elif cmd_args[0] == "-a":
+        print(f"{system_name} {version} Python {python_version} {os_name}")
+    elif cmd_args[0] == "-s":
+        print(system_name)
+    elif cmd_args[0] == "-r":
+        print(version)
+    elif cmd_args[0] in ("-h", "--help"):
+        print("Использование: uname [опции]")
+        print("  -a         вся информация")
+        print("  -s         имя системы")
+        print("  -r         версия системы")
+    else:
+        print(f"uname: неизвестная опция: {cmd_args[0]}")
+    return False
+
+
+def handle_find(cmd_args, vfs):
+    """Обрабатывает команду find. Ищет файлы по подстроке в имени."""
+    if vfs is None:
+        print("VFS не загружен.")
+        return False
+
+    if not cmd_args:
+        print("Использование: find <шаблон>")
+        print("  Пример: find .txt — найти все файлы с .txt в имени")
+        return False
+
+    pattern = cmd_args[0]
+    try:
+        all_files = vfs.namelist()
+    except Exception as e:
+        print(f"Ошибка чтения VFS: {e}")
+        return False
+
+    found = []
+    for file in all_files:
+        if file.endswith("/"):
+            continue
+        if pattern in file:
+            found.append(file)
+
+    if not found:
+        print(f"Ничего не найдено по шаблону: {pattern}")
+    else:
+        for file in found:
+            print(file)
+    return False
+
+
 def handle_command(command, cmd_args, vfs, current_path):
     """Обрабатывает одну команду. Возвращает True, если надо выйти."""
     if command == "exit":
         print("Пока!")
         return True
     elif command == "ls":
-        items = list_in_path(vfs, current_path)
+        show_all = "-a" in cmd_args or "-la" in cmd_args or "-al" in cmd_args
+        long_format = "-l" in cmd_args or "-la" in cmd_args or "-al" in cmd_args
+
+        items = list_in_path_detailed(vfs, current_path)
         if items is None:
             print("VFS не загружен.")
         else:
+            if show_all:
+                print(".")
+                print("..")
             for item in items:
-                print(item)
+                name = item["name"]
+                if not show_all and name.startswith("."):
+                    continue
+                if long_format:
+                    kind = "d" if item["is_dir"] else "f"
+                    size = item["size"]
+                    print(f"{kind} {size:>8}  {name}")
+                else:
+                    print(name)
     elif command == "cd":
         if not cmd_args:
-            print("Использование: cd <путь>")
-            return False
-        target = cmd_args[0]
-        if target.startswith("/"):
-            new_path = normalize_path(target)
+            new_path = "/"
         else:
-            new_path = join_path(current_path, target)
+            target = cmd_args[0]
+            if target.startswith("/"):
+                new_path = normalize_path(target)
+            else:
+                new_path = join_path(current_path, target)
         print(f"[cd] перешли в {new_path}")
         return new_path
     elif command == "cat":
@@ -165,9 +279,14 @@ def handle_command(command, cmd_args, vfs, current_path):
         content = read_vfs_file(vfs, file_path)
         if content is not None:
             print(content)
+    elif command == "uname":
+        handle_uname(cmd_args)
+    elif command == "find":
+        handle_find(cmd_args, vfs)
     else:
         print(f"Команда не найдена: {command}")
     return False
+
 
 def main():
     """Точка входа. Запускает цикл REPL."""
@@ -228,6 +347,7 @@ def main():
             break
         elif isinstance(result, str):
             current_path = result
+
 
 if __name__ == "__main__":
     main()

@@ -4,18 +4,19 @@
 
 Программа представляет собой эмулятор командной оболочки (shell) на языке
 Python. Реализует базовый цикл REPL, разбор команд с поддержкой кавычек,
-обработку ошибок, стартовые скрипты и работу с виртуальной файловой
-системой (VFS).
+обработку ошибок, стартовые скрипты, работу с виртуальной файловой
+системой (VFS) и основные команды UNIX-подобной оболочки.
 
 ## Автор
 
-garkavenkoarina655
+garkavenkoarina655-web
 
 ## Статус этапов
 
 - [x] Этап 1 — REPL
 - [x] Этап 2 — Конфигурация
 - [x] Этап 3 — VFS
+- [x] Этап 4 — Основные команды
 
 ## Функции и настройки
 
@@ -28,6 +29,9 @@ garkavenkoarina655
 - `normalize_path(path)` — нормализует путь (убирает лишние слэши и `..`).
 - `join_path(base, name)` — соединяет базовый путь и имя.
 - `list_in_path(vfs, current_path)` — список файлов в текущей папке VFS.
+- `list_in_path_detailed(vfs, current_path)` — список файлов с деталями.
+- `handle_uname(cmd_args)` — обрабатывает команду `uname`.
+- `handle_find(cmd_args, vfs)` — обрабатывает команду `find`.
 - `read_script(path)` — читает стартовый скрипт.
 - `get_prompt()` — возвращает приглашение вида `user@host:path$`.
 - `handle_command(command, cmd_args, vfs, current_path)` — обрабатывает одну команду.
@@ -41,12 +45,22 @@ garkavenkoarina655
 
 ### Встроенные команды
 
-- `ls` — показать файлы и папки в текущей директории VFS.
-- `cd <путь>` — перейти в папку внутри VFS.
+- `ls [-a] [-l]` — показать файлы и папки в текущей директории VFS.
+  - `-a` — показать скрытые файлы (начинающиеся с `.`).
+  - `-l` — подробный формат (тип, размер).
+  - `-la` или `-al` — комбинация.
+- `cd [путь]` — перейти в папку внутри VFS.
   - `cd folder` — перейти в папку `folder`.
   - `cd ..` — вернуться на уровень выше.
   - `cd /` — перейти в корень VFS.
+  - `cd` (без аргументов) — перейти в корень VFS.
 - `cat <файл>` — прочитать файл из VFS.
+- `find <шаблон>` — найти файлы в VFS по подстроке в имени.
+- `uname [-a] [-s] [-r] [-h]` — информация о системе.
+  - `-a` — вся информация.
+  - `-s` — имя системы.
+  - `-r` — версия системы.
+  - `-h` — справка.
 - `exit` — завершить работу эмулятора.
 
 ## Сборка и запуск
@@ -164,7 +178,7 @@ $ python src/shell1.py --vfs tests/vfs_multi.zip
 Эмулятор оболочки
 Введите 'exit' для выхода.
 VFS: tests/vfs_multi.zip
-VFS загружен. Файлы: ['hello.txt', 'readme.md', 'folder/', 'folder/inner.txt', 'docs/guide.txt']
+VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/guide.txt']
 
 Ivan@DESKTOP:~$ ls
 docs/
@@ -205,4 +219,51 @@ python tests/make_vfs.py
 
 ```bash
 tests\run_all.bat
+```
+
+## Этап 4: Основные команды
+
+### Новые команды
+
+- `find <шаблон>` — поиск файлов по подстроке в имени.
+- `uname` — информация о системе.
+
+### Улучшенные команды
+
+- `ls` — теперь поддерживает флаги `-a` (скрытые) и `-l` (подробно).
+- `cd` — без аргументов переходит в корень VFS.
+
+### Пример работы
+
+```text
+$ python src/shell1.py --vfs tests/vfs_multi.zip
+Эмулятор оболочки
+Введите 'exit' для выхода.
+VFS: tests/vfs_multi.zip
+VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/guide.txt']
+
+Ivan@DESKTOP:~$ uname -a
+EmulatorShell 1.0 Python 3.12.5 Windows
+Ivan@DESKTOP:~$ find .txt
+hello.txt
+folder/inner.txt
+docs/guide.txt
+Ivan@DESKTOP:~$ ls -la
+.
+..
+f       24  .hidden.txt
+d        0  docs/
+d        0  folder/
+f       22  hello.txt
+f       46  readme.md
+Ivan@DESKTOP:~$ exit
+Пока!
+```
+
+### Тестирование команд
+
+Для тестирования всех команд Этапа 4 используйте `run5_stage4.bat`:
+
+```bash
+tests\run5_stage4.bat
 ```

@@ -12,7 +12,8 @@ def make_multifile_vfs(path):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("hello.txt", "Привет из VFS!")
         z.writestr("readme.md", "# Это README\n\nДокументация VFS.")
-        z.writestr("folder/", "")                   # пустая папка
+        z.writestr(".hidden.txt", "Скрытый файл.")
+        z.writestr("folder/", "")
         z.writestr("folder/inner.txt", "Файл в папке folder")
         z.writestr("docs/guide.txt", "Руководство пользователя.")
 

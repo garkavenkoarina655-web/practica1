@@ -18,5 +18,9 @@ echo === Test 4: with deep VFS and script ===
 call tests\run4_full.bat
 echo.
 
+echo === Test 5: Stage 4 - all commands ===
+call tests\run5_stage4.bat
+echo.
+
 echo    ALL TESTS COMPLETED
 pause

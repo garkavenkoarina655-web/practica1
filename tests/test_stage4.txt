@@ -1,0 +1,51 @@
+# Тест команд Этапа 4
+# uname
+uname
+uname -a
+uname -s
+uname -r
+uname -h
+uname -x
+
+# ls без флагов
+ls
+
+# ls -a (с скрытыми)
+ls -a
+
+# ls -l (подробно)
+ls -l
+
+# ls -la (всё вместе)
+ls -la
+
+# find
+find .txt
+find .md
+find inner
+find folder
+find qwerty
+find
+
+# cd
+cd folder
+ls
+cd
+ls
+cd docs
+ls
+cd ..
+ls
+cd /
+ls
+
+# cat
+cat hello.txt
+cat folder/inner.txt
+
+# ошибки
+cat no_such.txt
+cd
+ls -z
+
+exit
