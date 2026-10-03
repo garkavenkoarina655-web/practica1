@@ -17,21 +17,24 @@ garkavenkoarina655-web
 - [x] Этап 2 — Конфигурация
 - [x] Этап 3 — VFS
 - [x] Этап 4 — Основные команды
+- [x] Этап 5 — Дополнительные команды
 
 ## Функции и настройки
 
 ### Функции
 
 - `parse_arguments()` — разбирает аргументы командной строки.
-- `load_vfs(path)` — загружает VFS из ZIP-архива.
+- `load_vfs(path)` — загружает VFS из ZIP-архива в память (словарь).
 - `read_vfs_file(vfs, path)` — читает файл из VFS.
 - `list_vfs_files(vfs)` — список всех файлов в VFS.
 - `normalize_path(path)` — нормализует путь (убирает лишние слэши и `..`).
 - `join_path(base, name)` — соединяет базовый путь и имя.
 - `list_in_path(vfs, current_path)` — список файлов в текущей папке VFS.
-- `list_in_path_detailed(vfs, current_path)` — список файлов с деталями.
+- `list_in_path_detailed(vfs, current_path)` — список файлов с деталями (тип, размер).
 - `handle_uname(cmd_args)` — обрабатывает команду `uname`.
 - `handle_find(cmd_args, vfs)` — обрабатывает команду `find`.
+- `handle_touch(cmd_args, vfs, current_path)` — обрабатывает команду `touch`.
+- `handle_rmdir(cmd_args, vfs, current_path)` — обрабатывает команду `rmdir`.
 - `read_script(path)` — читает стартовый скрипт.
 - `get_prompt()` — возвращает приглашение вида `user@host:path$`.
 - `handle_command(command, cmd_args, vfs, current_path)` — обрабатывает одну команду.
@@ -61,6 +64,10 @@ garkavenkoarina655-web
   - `-s` — имя системы.
   - `-r` — версия системы.
   - `-h` — справка.
+- `touch <файл>` — создать пустой файл в VFS.
+  - Можно создать несколько файлов сразу: `touch a.txt b.txt`.
+- `rmdir <папка>` — удалить пустую папку из VFS.
+  - Удаляет только пустые папки.
 - `exit` — завершить работу эмулятора.
 
 ## Сборка и запуск
@@ -178,10 +185,11 @@ $ python src/shell1.py --vfs tests/vfs_multi.zip
 Эмулятор оболочки
 Введите 'exit' для выхода.
 VFS: tests/vfs_multi.zip
-VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/guide.txt']
+VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/', 'docs/guide.txt', 'empty/']
 
 Ivan@DESKTOP:~$ ls
 docs/
+empty/
 folder/
 hello.txt
 readme.md
@@ -240,7 +248,7 @@ $ python src/shell1.py --vfs tests/vfs_multi.zip
 Эмулятор оболочки
 Введите 'exit' для выхода.
 VFS: tests/vfs_multi.zip
-VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/guide.txt']
+VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/', 'docs/guide.txt', 'empty/']
 
 Ivan@DESKTOP:~$ uname -a
 EmulatorShell 1.0 Python 3.12.5 Windows
@@ -253,6 +261,7 @@ Ivan@DESKTOP:~$ ls -la
 ..
 f       24  .hidden.txt
 d        0  docs/
+d        0  empty/
 d        0  folder/
 f       22  hello.txt
 f       46  readme.md
@@ -267,3 +276,110 @@ Ivan@DESKTOP:~$ exit
 ```bash
 tests\run5_stage4.bat
 ```
+
+## Этап 5: Дополнительные команды
+
+### Новые команды
+
+- `touch <файл>` — создать пустой файл в VFS.
+- `rmdir <папка>` — удалить пустую папку из VFS.
+
+### Особенности
+
+- Все изменения происходят **только в памяти** — ZIP-архив на диске не меняется.
+- VFS хранится в словаре `{путь: содержимое}` — можно добавлять и удалять ключи.
+- `rmdir` удаляет **только пустые** папки (как в Linux).
+
+### Пример работы
+
+```text
+$ python src/shell1.py --vfs tests/vfs_multi.zip
+Эмулятор оболочки
+Введите 'exit' для выхода.
+VFS: tests/vfs_multi.zip
+VFS загружен. Файлы: ['hello.txt', 'readme.md', '.hidden.txt', 'folder/', 'folder/inner.txt', 'docs/', 'docs/guide.txt', 'empty/']
+
+Ivan@DESKTOP:~$ ls
+docs/
+empty/
+folder/
+hello.txt
+readme.md
+Ivan@DESKTOP:~$ touch new_file.txt
+Создан файл: new_file.txt
+Ivan@DESKTOP:~$ ls
+docs/
+empty/
+folder/
+hello.txt
+new_file.txt
+readme.md
+Ivan@DESKTOP:~$ rmdir empty
+Удалена папка: empty/
+Ivan@DESKTOP:~$ rmdir folder
+Ошибка: папка не пустая: folder/
+Ivan@DESKTOP:~$ exit
+Пока!
+```
+
+### Тестирование команд Этапа 5
+
+Для тестирования всех команд Этапа 5 используйте `run6_stage5.bat`:
+
+```bash
+tests\run6_stage5.bat
+```
+
+## Структура проекта
+
+```
+.
+├── README.md
+├── run.bat
+├── .gitignore
+├── src/
+│   └── shell1.py
+└── tests/
+    ├── .gitkeep
+    ├── make_vfs.py
+    ├── test1.txt
+    ├── test2.txt
+    ├── test3.txt
+    ├── test_vfs_multi.txt
+    ├── test_vfs_deep.txt
+    ├── test_stage4.txt
+    ├── test_stage5.txt
+    ├── vfs_minimal.zip
+    ├── vfs_multi.zip
+    ├── vfs_deep.zip
+    ├── run1_no_args.bat
+    ├── run2_with_vfs.bat
+    ├── run3_with_script.bat
+    ├── run4_full.bat
+    ├── run5_stage4.bat
+    ├── run6_stage5.bat
+    └── run_all.bat
+```
+
+## Тестирование
+
+Для запуска всех тестов разом:
+
+```bash
+tests\run_all.bat
+```
+
+Или через Git Bash:
+
+```bash
+cmd //c tests/run_all.bat
+```
+
+### Что тестируется
+
+- **Test 1** — запуск без VFS (интерактив).
+- **Test 2** — минимальный VFS (`vfs_minimal.zip`).
+- **Test 3** — multi VFS + стартовый скрипт (`test_vfs_multi.txt`).
+- **Test 4** — deep VFS + стартовый скрипт (`test_vfs_deep.txt`).
+- **Test 5** — все команды Этапа 4 (`test_stage4.txt`).
+- **Test 6** — все команды Этапа 5 (`test_stage5.txt`).

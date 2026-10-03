@@ -1,0 +1,39 @@
+# Тест команд Этапа 5
+# Исходное состояние VFS
+ls
+
+# Создание файлов
+touch new_file.txt
+touch another.txt
+ls
+
+# Создание файла, который уже есть (ошибка)
+touch hello.txt
+
+# Создание нескольких файлов сразу
+touch a.txt b.txt c.txt
+ls
+
+# Создание файла в папке
+cd folder
+ls
+touch inner_new.txt
+ls
+cd ..
+
+# Удаление пустой папки
+rmdir empty
+ls
+
+# Удаление непустой папки (ошибка)
+rmdir folder
+
+# Удаление несуществующей папки (ошибка)
+rmdir no_such
+
+# Ошибки: без аргументов
+touch
+rmdir
+
+# Итоговое состояние
+ls

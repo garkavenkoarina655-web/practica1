@@ -15,7 +15,9 @@ def make_multifile_vfs(path):
         z.writestr(".hidden.txt", "Скрытый файл.")
         z.writestr("folder/", "")
         z.writestr("folder/inner.txt", "Файл в папке folder")
+        z.writestr("docs/", "")
         z.writestr("docs/guide.txt", "Руководство пользователя.")
+        z.writestr("empty/", "")
 
 def make_deep_vfs(path):
     """Создаёт VFS с 3+ уровнями вложенности."""

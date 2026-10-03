@@ -24,13 +24,19 @@ def parse_arguments():
 
 
 def load_vfs(path):
-    """Загружает VFS из ZIP-архива. Возвращает объект ZipFile или None."""
+    """Загружает VFS из ZIP-архива в память. Возвращает словарь или None."""
     if path is None:
         return None
     try:
-        vfs = zipfile.ZipFile(path, "r")
-        return vfs
+        with zipfile.ZipFile(path, "r") as z:
+            vfs = {}
+            for name in z.namelist():
+                vfs[name] = z.read(name)
+            return vfs
     except FileNotFoundError:
+        print(f"Ошибка: файл VFS не найден: {path}")
+        return None
+    except zipfile.BadZipFile:
         print(f"Ошибка: неверный формат VFS (не ZIP): {path}")
         return None
     except Exception as e:
@@ -44,7 +50,7 @@ def read_vfs_file(vfs, path):
         print("VFS не загружен.")
         return None
     try:
-        content = vfs.read(path)
+        content = vfs[path]
         return content.decode("utf-8")
     except KeyError:
         print(f"Файл не найден в VFS: {path}")
@@ -80,7 +86,7 @@ def list_vfs_files(vfs):
         print("VFS не загружен.")
         return None
     try:
-        return vfs.namelist()
+        return list(vfs.keys())
     except Exception as e:
         print(f"Ошибка чтения списка файлов: {e}")
         return None
@@ -113,7 +119,7 @@ def list_in_path(vfs, current_path):
     """Возвращает список файлов и папок в current_path (только 1-й уровень)."""
     if vfs is None:
         return None
-    all_files = vfs.namelist()
+    all_files = list(vfs.keys())
     prefix = "" if current_path == "/" else current_path.lstrip("/") + "/"
     items = set()
     for file in all_files:
@@ -136,7 +142,7 @@ def list_in_path_detailed(vfs, current_path):
     """
     if vfs is None:
         return None
-    all_files = vfs.namelist()
+    all_files = list(vfs.keys())
     prefix = "" if current_path == "/" else current_path.lstrip("/") + "/"
     items = {}
     for file in all_files:
@@ -154,7 +160,7 @@ def list_in_path_detailed(vfs, current_path):
             items[name] = {"name": name, "is_dir": True, "size": 0}
         else:
             try:
-                size = len(vfs.read(file))
+                size = len(vfs[(file)])
             except Exception:
                 size = 0
             items[name] = {"name": name, "is_dir": False, "size": size}
@@ -214,7 +220,7 @@ def handle_find(cmd_args, vfs):
 
     pattern = cmd_args[0]
     try:
-        all_files = vfs.namelist()
+        all_files = list(vfs.keys())
     except Exception as e:
         print(f"Ошибка чтения VFS: {e}")
         return False
@@ -233,6 +239,69 @@ def handle_find(cmd_args, vfs):
             print(file)
     return False
 
+def handle_touch(cmd_args, vfs, current_path):
+    """Обрабатывает команду touch. Создаёт пустой файл в VFS."""
+    if vfs is None:
+        print("VFS не загружен.")
+        return False
+
+    if not cmd_args:
+        print("Использование: touch <файл>")
+        return False
+
+    for name in cmd_args:
+        file_path = join_path(current_path, name).lstrip("/")
+
+        if file_path in vfs:
+            print(f"Файл уже существует: {file_path}")
+            continue
+
+        if file_path.endswith("/"):
+            print(f"Ошибка: это папка, а не файл: {file_path}")
+            continue
+
+        vfs[file_path] = b""
+        print(f"Создан файл: {file_path}")
+
+    return False
+
+def handle_rmdir(cmd_args, vfs, current_path):
+    """Обрабатывает команду rmdir. Удаляет пустую папку из VFS."""
+    if vfs is None:
+        print("VFS не загружен.")
+        return False
+
+    if not cmd_args:
+        print("Использование: rmdir <папка>")
+        return False
+
+    for name in cmd_args:
+        dir_path = join_path(current_path, name).lstrip("/")
+
+        if not dir_path.endswith("/"):
+            dir_path += "/"
+
+        if dir_path not in vfs:
+            print(f"Папка не найдена: {dir_path}")
+            continue
+
+        prefix = dir_path
+        is_empty = True
+        for key in vfs.keys():
+            if key == dir_path:
+                continue
+            if key.startswith(prefix):
+                is_empty = False
+                break
+
+        if not is_empty:
+            print(f"Ошибка: папка не пустая: {dir_path}")
+            continue
+
+        del vfs[dir_path]
+        print(f"Удалена папка: {dir_path}")
+
+    return False
 
 def handle_command(command, cmd_args, vfs, current_path):
     """Обрабатывает одну команду. Возвращает True, если надо выйти."""
@@ -283,10 +352,13 @@ def handle_command(command, cmd_args, vfs, current_path):
         handle_uname(cmd_args)
     elif command == "find":
         handle_find(cmd_args, vfs)
+    elif command == "touch":
+        handle_touch(cmd_args, vfs, current_path)
+    elif command == "rmdir":
+        handle_rmdir(cmd_args, vfs, current_path)
     else:
         print(f"Команда не найдена: {command}")
     return False
-
 
 def main():
     """Точка входа. Запускает цикл REPL."""
@@ -301,7 +373,7 @@ def main():
         if vfs is None:
             print("Не удалось загрузить VFS. Продолжаю без него.")
         else:
-            print(f"VFS загружен. Файлы: {vfs.namelist()}")
+            print(f"VFS загружен. Файлы: {list(vfs.keys())}")
     if args.script:
         print(f"Стартовый скрипт: {args.script}")
     print()
